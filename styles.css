@@ -1,0 +1,53 @@
+/* Simple, clean styles for a school project report structure */
+:root{
+  --bg:#f7f8fb;
+  --card:#ffffff;
+  --accent:#2b6cb0;
+  --muted:#6b7280;
+  --max-width:1100px;
+  --radius:8px;
+}
+*{box-sizing:border-box}
+body{font-family:Inter,system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;margin:0;background:var(--bg);color:#111;line-height:1.5}
+.container{max-width:var(--max-width);margin:0 auto;padding:1rem}
+.site-header{background:linear-gradient(180deg,#fff, #f8fbff);border-bottom:1px solid #e6eef9;position:sticky;top:0;z-index:50}
+.header-inner{display:flex;align-items:center;gap:1rem;padding:0.75rem 0}
+.site-title{font-size:1.125rem;margin:0}
+.nav-toggle{display:none;background:transparent;border:1px solid transparent;padding:0.35rem 0.6rem;border-radius:6px}
+.primary-nav ul{list-style:none;margin:0;padding:0;display:flex;gap:0.25rem}
+.primary-nav a{display:block;padding:0.5rem 0.75rem;color:var(--accent);text-decoration:none;border-radius:6px}
+.primary-nav a:hover,.primary-nav a:focus{background:rgba(43,108,176,0.08)}
+
+.main-content{padding:1.25rem 0}
+.report-section{margin:1.25rem 0;padding:1rem}
+.report-section h2{margin:0 0 0.75rem 0;color:#0f172a}
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:1rem}
+.card{background:var(--card);padding:1rem;border-radius:var(--radius);box-shadow:0 1px 2px rgba(15,23,42,0.04);border:1px solid rgba(15,23,42,0.03)}
+.card.full{grid-column:1/-1}
+.card.small{width:200px}
+.placeholder-text{min-height:3.25rem;padding:0.5rem;border:2px dashed #e6eef9;border-radius:6px;color:var(--muted);background:linear-gradient(180deg,rgba(250,250,252,0.6),transparent)}
+.image-placeholder,.diagram-placeholder{min-height:8rem;display:flex;align-items:center;justify-content:center;border-radius:6px;background:linear-gradient(180deg,#fbfdff,#f4f8ff);color:var(--muted);border:1px dashed #e1eeff}
+.video-wrap{display:flex;flex-direction:column;gap:0.5rem}
+.embed-video{width:100%;height:220px;border-radius:6px;background:#000}
+.caption{font-size:0.85rem;color:var(--muted);margin:0}
+
+.back-top{text-align:right;margin-top:1rem}
+
+.site-footer{padding:1rem 0;border-top:1px solid #e6eef9;background:transparent}
+
+/* Responsive */
+@media (max-width:900px){
+  .grid{grid-template-columns:1fr}
+  .primary-nav{display:none}
+  .nav-toggle{display:inline-block}
+  .primary-nav.open{display:block;background:var(--card);position:absolute;right:1rem;top:64px;padding:0.5rem;border-radius:8px;box-shadow:0 6px 18px rgba(2,6,23,0.08)}
+  .primary-nav ul{flex-direction:column}
+}
+
+/* Accessibility focus styles */
+a:focus{outline:3px solid rgba(43,108,176,0.2);outline-offset:2px}
+.skip-link{position:absolute;left:-9999px;top:auto;width:1px;height:1px;overflow:hidden}
+.skip-link:focus{position:static;left:0;top:0;width:auto;height:auto;background:#fff;padding:0.5rem;border:1px solid #ddd}
+
+/* Small utilities */
+.small{max-width:240px}
