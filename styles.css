@@ -31,6 +31,9 @@ body{font-family:Inter,system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;marg
 .embed-video{width:100%;height:220px;border-radius:6px;background:#000}
 .caption{font-size:0.85rem;color:var(--muted);margin:0}
 
+/* Embedded iframe for map demo */
+.embed-iframe{width:100%;height:70vh;border:0;border-radius:8px;box-shadow:0 6px 20px rgba(2,6,23,0.08)}
+
 .back-top{text-align:right;margin-top:1rem}
 
 .site-footer{padding:1rem 0;border-top:1px solid #e6eef9;background:transparent}

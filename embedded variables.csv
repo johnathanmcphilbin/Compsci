@@ -1,9 +1,0 @@
-Variable,Sensor Type,Input Type,Why Measure It,Example Sensor
-Air Temperature,Temperature/Humidity Sensor,Digital,Controls evaporation and drought risk,DHT22 or BME280
-Humidity,Temperature/Humidity Sensor,Digital,Affects evapotranspiration and soil drying,DHT22 or BME280
-Soil Moisture,Soil Moisture Probe,Analogue,Direct measure of water available to plants,Capacitive Soil Moisture Sensor
-Light Level,Light Sensor (LDR or Lux Sensor),Analogue,Estimates sunlight exposure which drives evaporation,LDR or TSL2591
-Wind Speed,Anemometer,Digital,Wind increases evaporation and dries soil faster,Rotational Anemometer
-Rain Detection,Rain Sensor,Treated as Digital (wet/dry),Indicates whether rainfall is occurring,Rain Detection Module
-Barometric Pressure,Barometric Sensor,Digital,Predicts weather changes (rainfall or drought),BMP280 or BME280
-
