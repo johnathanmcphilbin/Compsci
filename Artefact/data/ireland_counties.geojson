@@ -1,0 +1,27 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "county": "Carlow",
+        "province": "Leinster"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              -7.15,
+              52.5
+            ],
+            [
+              -6.75,
+              52.5
+            ]
+          ]
+        ]
+      }
+    }
+  ]
+}

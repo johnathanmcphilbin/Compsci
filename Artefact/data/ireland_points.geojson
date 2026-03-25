@@ -1,0 +1,24 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "id": "CAR-01",
+        "county": "Carlow",
+        "elevation_m": 201.4,
+        "rainfall_annual_mm": 993.7,
+        "soil_moisture": 0.217,
+        "flood_susceptibility": 0.35,
+        "soil_type": "Podzol"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -6.86527,
+          52.7507
+        ]
+      }
+    }
+  ]
+}

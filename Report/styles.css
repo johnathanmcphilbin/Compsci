@@ -27,6 +27,10 @@ body{font-family:Inter,system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;marg
 .card.small{width:200px}
 .placeholder-text{min-height:3.25rem;padding:0.5rem;border:2px dashed #e6eef9;border-radius:6px;color:var(--muted);background:linear-gradient(180deg,rgba(250,250,252,0.6),transparent)}
 .image-placeholder,.diagram-placeholder{min-height:8rem;display:flex;align-items:center;justify-content:center;border-radius:6px;background:linear-gradient(180deg,#fbfdff,#f4f8ff);color:var(--muted);border:1px dashed #e1eeff}
+.image-wrap{display:flex;align-items:center;justify-content:center;padding:1rem;border-radius:6px;background:#fff;max-width:100%}
+.report-image{height:auto !important;border-radius:4px;box-shadow:0 2px 4px rgba(0,0,0,0.1)}
+.image-small{width:220px !important;max-width:220px !important}
+.image-medium{width:500px !important;max-width:500px !important}
 .video-wrap{display:flex;flex-direction:column;gap:0.5rem}
 .embed-video{width:100%;height:220px;border-radius:6px;background:#000}
 .caption{font-size:0.85rem;color:var(--muted);margin:0}

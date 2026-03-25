@@ -1,0 +1,306 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width,initial-scale=1" />
+		<title>Computer Science Project 2026 - 320400</title>
+		<link rel="stylesheet" href="styles.css?v=1.1">
+		<script type="module">
+			import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+			mermaid.initialize({ startOnLoad: true, theme: 'neutral' });
+		</script>
+	</head>
+	<body>
+		<a class="skip-link" href="#main">Skip to content</a>
+
+		<header class="site-header">
+			<div class="container header-inner">
+				<h1 class="site-title">Project Report — Structure</h1>
+				<button id="nav-toggle" class="nav-toggle" aria-expanded="false" aria-controls="primary-nav">Menu</button>
+				<nav id="primary-nav" class="primary-nav" aria-label="Primary">
+					<ul>
+						<li><a href="#meeting">Meeting the Brief</a></li>
+						<li><a href="#investigation">Investigation</a></li>
+						<li><a href="#plan">Plan and Design</a></li>
+						<li><a href="#create">Create</a></li>
+						<li><a href="#evaluation">Evaluation</a></li>
+						<li><a href="#references">References</a></li>
+						<li><a href="#summary">Summary Word Count</a></li>
+						<li><a href="#map">Map (TreeRoute)</a></li>
+					</ul>
+				</nav>
+			</div>
+		</header>
+
+		<main id="main" class="container main-content">
+			<section id="meeting" class="report-section">
+				<h2>Meeting the Brief</h2>
+				<div class="grid">
+					<div class="card full">
+						<h3>Meeting the Brief</h3>
+						<div class="placeholder-text">
+							<p>This project presents a proof of concept embedded system designed for environmental monitoring and flood risk assessment. The primary hardware component is a deployable sensor dart powered by a BBC microbit V2 and encased in a custom 3D printed housing. This design draws inspiration from modern reforestation technologies that utilize drones for remote monitoring. This system captures live data directly from the field to ensure accuracy. The 3D modeled casing is engineered for durability and compactness protecting the internal electronics during drone deployment.</p>
+							<p>The system integrates both analogue and digital inputs to meet complex design requirements. A Kitronik soil moisture sensor connected to pin P0 provides analogue readings on soil saturation by measuring electrical resistance between conductive pads. Simultaneously the microbits built in sensors gather digital data regarding temperature light and sound levels. Once powered the system operates autonomously in a continuous loop formatting data as CSV strings and transmitting them via serial communication for further processing.</p>
+							<p>To satisfy the disaster risk modelling requirement the real world measurements from the sensor dart feed into a Python based model. In this simulation the system calculates a wildfire and flood risk index from 0.0 to 1.0. I combined live microbit data with open source Irish county data including elevation and annual rainfall averages. This allows the model to predict how specific geographic areas might respond to environmental stress based on their actual topography and current saturation levels.</p>
+							<p>To explore the models behavior under extreme conditions I developed two what if scenario simulations. The first scenario simulates a 3C temperature increase to test the systems prediction for wildfire risk and drought showing how increased evaporation affects the risk index. The second scenario simulates a 30% decrease in rainfall to explore the long term impact on soil moisture and land suitability for reforestation. The web based mapping system visualizes these results by calculating a risk delta allowing users to see exactly where risk increases most significantly.</p>
+							<p>The system includes a physical and virtual feedback mechanism that enables it to adapt automatically to changing conditions. Virtually the Python model adjusts its risk predictions in real time as the microbit transmits new data. Physically as demonstrated in the project video the system reacts to immediate environmental threats. During testing when high rainfall simulated by the tapping of a pen on the microbit or high evaporation simulated by a hairdryer was detected the system automatically triggered a sound alert. The LED display shows smiley worried or sad faces depending on the calculated risk levels. This audible alarm and visual status serve an adaptive purpose in the field by scaring away animals that might disturb the sensor dart while providing an immediate visual diagnostic of the forests health.</p>
+						</div>
+					</div>
+					<div class="card full">
+						<h3>Artefact Demonstration Video</h3>
+						<div class="video-wrap">
+							<video class="embed-video" controls style="width: 100%; max-width: 100%; border-radius: 8px; height: auto;">
+								<source src="assets/full_video.mp4" type="video/mp4">
+								Your browser does not support the video tag.
+							</video>
+							<p class="caption">Artefact in operation demonstration (5-minute maximum as per SEC requirements).</p>
+						</div>
+					</div>
+				</div>
+			</section>
+
+			<section id="investigation" class="report-section">
+				<h2>Investigation</h2>
+				<div class="grid">
+					<div class="card full">
+						<h3>Research and Investigation</h3>
+						<div class="placeholder-text">
+							<p>Research into existing environmental monitoring solutions revealed that many current systems rely on static weather stations which provide broad data but lack the granular detail needed for specific field analysis. To improve on this, I investigated the concept of drone based sensor deployment used by modern environmental startups. Organizations like the Office of Public Works and Met Eireann provide extensive historical data through platforms like data.gov.ie, but this information is often predictive or based on past events rather than live field conditions. This led to the decision to develop a sensor dart that could bridge the gap between regional forecasts and local ground reality.</p>
+							<p>Technical research on hardware focused on the Kitronik soil moisture sensor. According to official Kitronik resources, this sensor uses two conductive pads to measure the resistance of the soil, which changes based on water content. To ensure the longevity of the hardware, I learned through technical documentation that the sensor should not be powered continuously because this causes rapid electrode erosion through electrolysis. This insight shaped my programming logic, where the microbit only takes a reading periodically rather than in a continuous stream.</p>
+							<p>For the software and data processing components, I researched Python libraries and syntax on W3Schools to understand how to handle serial communication. I decided to use CSV formatting for data transmission because it is a lightweight and universally accepted format for data analysis. This ensures the microbit can send multiple sensor values, such as temperature, light, and soil moisture, in a single string that the Python model can easily parse.</p>
+							<p>The visualization aspect was informed by investigating GeoJSON and web mapping tools. By looking at how flood risk data is presented on official Irish portals like floodinfo.ie, I decided to use color coded heatmaps to make the data intuitive for users. The research into Irish flood risk patterns also influenced the what if scenarios in my Python model. By using real world data variables, the system moves beyond a simple simulation and becomes a functional tool for land suitability analysis. These research steps ensured that the final artefact is not just a collection of sensors but a cohesive system rooted in modern environmental technology practices.</p>
+						</div>
+					</div>
+				</div>
+			</section>
+
+			<section id="plan" class="report-section">
+				<h2>Plan and Design</h2>
+				<div class="grid">
+					<div class="card full">
+						<h3>Design Objectives and Project Options</h3>
+						<div class="placeholder-text">
+							<p>The primary objective is a functional prototype bridging remote sensing and ground data. I evaluated two physical designs: a stationary ground station and a specialized sensor dart for aerial deployment. I chose the sensor dart for its versatility in monitoring hard-to-reach areas like floodplains. This justified using 3D printing for a reinforced, aerodynamic shell to protect the microbit during impact. The housing includes a weighted nose cone ensuring the Kitronik sensor makes vertical contact with soil.</p>
+						</div>
+					</div>
+					<div class="card">
+						<h3>Technology Stack and Justification</h3>
+						<div class="placeholder-text">
+							<p>The architecture centers on the microbit V2 for its sensors and low power. A Kitronik soil sensor captures analogue saturation data; its pronged design ensures soil penetration. Software includes MakeCode for embedded logic and Python for backend risk modeling, linked via Pyserial. Leaflet.js and GeoJSON provide the visualization layer. This stack allows rapid prototyping and seamless data flow from hardware to web.</p>
+						</div>
+					</div>
+					<div class="card">
+						<h3>Design Sketch</h3>
+						<div class="image-wrap">
+							<img src="assets/Cad Designed .png" alt="3D Casing CAD and Sensor Placement Diagram" class="report-image image-small" style="width: 220px; height: auto;">
+						</div>
+					</div>
+					<div class="card full">
+						<h3>System Architecture and Logic</h3>
+						<div class="placeholder-text">
+							<p>The high level system architecture follows a linear path from data acquisition to user visualization. The process begins with the microbit gathering readings from the Kitronik sensor and internal components. These values are compiled into a CSV string and transmitted through the serial port.</p>
+							<div class="mermaid" style="background: white; padding: 1rem; border-radius: 8px; border: 1px solid #eee; margin: 1rem 0;">
+								flowchart LR
+									subgraph Artefact [Physical Artefact]
+										A[Kitronik Soil Sensor] --> MB[BBC microbit V2]
+										B[Internal Sensors] --> MB
+									end
+									MB -->|USB Serial CSV| PC[Python Controller]
+									subgraph Backend [Data Processing]
+										PC --> RM[Risk Model Algorithm]
+										RM --> RJ[results.json]
+									end
+									subgraph Frontend [Visualization]
+										RJ --> TM[TreeRoute Interactive Map]
+										GD[GeoJSON/CSV Baselines] --> TM
+									end
+							</div>
+							<p>A Python script acts as the central controller, listening for incoming data. Upon receiving a string, the script parses the values and feeds them into a disaster risk algorithm. Finally, the system updates a GeoJSON-compatible results file which the web map reads to refresh markers. The logic follows a loop: initialize sensors, take readings, display status, and enter power saving mode to prevent electrolysis.</p>
+						</div>
+					</div>
+					<div class="card full">
+						<h3>The Embedded Model and Algorithm</h3>
+						<div class="placeholder-text">
+							<p>The core system is an adaptive logic model in the microbit. Button A cycles modes (T, S, L, M) and Button B displays real time sensor values for calibration. The algorithm monitors environmental risks in a continuous loop. If temperature exceeds 45 degrees and moisture is below 300, it triggers fire risk auditory and visual alerts. If moisture drops below 200, a melodic tone indicates low saturation. Variables are concatenated into a CSV string for serial transmission, including status messages that ensure the web map reflects hazards in real time.</p>
+							<div class="mermaid" style="background: white; padding: 1rem; border-radius: 8px; border: 1px solid #eee; margin-top: 1rem;">
+								flowchart TD
+									Start([Power On]) --> Init[Initialize Sensors & Clear Screen]
+									Init --> Loop{Main Loop}
+									Loop --> Read[Read Soil P0, Temp, Light, Sound]
+									Read --> CheckFire{Temp > 45 & Moisture < 300?}
+									CheckFire -->|Yes| FireAlert[Show Fire Icon & Play Siren]
+									CheckFire -->|No| CheckDry{Moisture < 200?}
+									CheckDry -->|Yes| DryAlert[Show Sad Face & Play Melody]
+									CheckDry -->|No| Normal[Show Smiley Face]
+									FireAlert & DryAlert & Normal --> CSV[Format CSV String: Temp,Sound,Light,Moist,Status]
+									CSV --> Serial[Transmit via Serial USB]
+									Serial --> Sleep[Power Saving Sleep 2000ms]
+									Sleep --> Loop
+							</div>
+						</div>
+					</div>
+				</div>
+			</section>
+
+			<section id="create" class="report-section">
+				<h2>Create</h2>
+				<div class="grid">
+					<div class="card full">
+						<h3>Development Milestones</h3>
+						<div class="placeholder-text">
+							<p>Development followed a structured timeline to ensure component functionality before full integration. Milestone one involved breadboarding the Kitronik sensor with the microbit to establish analogue data baselines. The second milestone focused on 3D modeling the dart housing, requiring multiple iterations for a secure internal mount. Third was implementing the serial link to transmit readings to the Python model. The final milestone created the web mapping system which uses processed data to update a GeoJSON heatmap of Ireland.</p>
+						</div>
+					</div>
+					<div class="card">
+						<h3>CAD Design and Physical Implementation</h3>
+						<div class="placeholder-text">
+							<p>The implementation phase focused on the CAD design of the dart housing. I encountered issues with the microbit V2 dimensions as the built in speaker and larger profile caused stress on the pin connectors in early tight fits. Digital calipers were used to measure the exact clearance for P0 and power pins. I eventually redesigned the housing with a side slit for a custom plastic locking mechanism. This protective slide prevents the microbit from falling out during high impact drone deployments while keeping electronics accessible for maintenance.</p>
+						</div>
+					</div>
+					<div class="card full">
+						<h3>Photos / Firmware</h3>
+						<div class="image-wrap">
+							<img src="assets/micro code.png" alt="Micro:bit firmware code" class="report-image image-medium" style="width: 500px; height: auto;">
+						</div>
+					</div>
+					<div class="card full">
+						<h3>Testing and Technical Challenges</h3>
+						<div class="placeholder-text">
+							<p>Testing used a unit and system approach. During light sensor testing, readings were constant because the LED display interfered. I resolved this by adding a clear screen command to each loop. The sound sensor initially failed as it needed stabilization time; a 2000ms startup delay was added to allow proper calibration. Physical testing revealed the microbit could slip from the housing, leading to the side slit and plastic locking slide design.</p>
+							
+							<div class="table-container" style="overflow-x: auto; margin-top: 1rem;">
+								<table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+									<thead>
+										<tr style="background-color: #f8fafc; border-bottom: 2px solid #e2e8f0;">
+											<th style="padding: 0.5rem; text-align: left;">Test ID</th>
+											<th style="padding: 0.5rem; text-align: left;">Component</th>
+											<th style="padding: 0.5rem; text-align: left;">Input Condition</th>
+											<th style="padding: 0.5rem; text-align: left;">Expected Output</th>
+											<th style="padding: 0.5rem; text-align: left;">Initial Result</th>
+											<th style="padding: 0.5rem; text-align: left;">Resolution</th>
+										</tr>
+									</thead>
+									<tbody>
+										<tr style="border-bottom: 1px solid #e2e8f0;"><td>1</td><td>Light Sensor</td><td>Torch illumination</td><td>Numerical change</td><td>Fail</td><td>Added basic clear screen</td></tr>
+										<tr style="border-bottom: 1px solid #e2e8f0;"><td>2</td><td>Sound Sensor</td><td>Loud clap</td><td>Value above zero</td><td>Fail</td><td>Added 2s startup delay</td></tr>
+										<tr style="border-bottom: 1px solid #e2e8f0;"><td>3</td><td>Soil Sensor</td><td>Dry vs Wet soil</td><td>Significant jump</td><td>Pass</td><td>N/A</td></tr>
+										<tr style="border-bottom: 1px solid #e2e8f0;"><td>4</td><td>Temp Sensor</td><td>Heat source</td><td>Fire Alarm icon</td><td>Pass</td><td>N/A</td></tr>
+										<tr style="border-bottom: 1px solid #e2e8f0;"><td>5</td><td>Mode Toggle</td><td>Button A press</td><td>T S L M letters</td><td>Pass</td><td>N/A</td></tr>
+										<tr style="border-bottom: 1px solid #e2e8f0;"><td>6</td><td>Data Value</td><td>Button B press</td><td>Scroll sensor value</td><td>Pass</td><td>N/A</td></tr>
+										<tr style="border-bottom: 1px solid #e2e8f0;"><td>7</td><td>Serial Link</td><td>Rapid data stream</td><td>Clean CSV string</td><td>Fail</td><td>Added 2s loop pause</td></tr>
+										<tr style="border-bottom: 1px solid #e2e8f0;"><td>8</td><td>Case Security</td><td>1 meter drop test</td><td>Stay in housing</td><td>Fail</td><td>Added plastic slider insert</td></tr>
+										<tr style="border-bottom: 1px solid #e2e8f0;"><td>9</td><td>Calibration</td><td>Cold start power</td><td>Immediate reading</td><td>Fail</td><td>Required 2s sensor warm up</td></tr>
+										<tr style="border-bottom: 1px solid #e2e8f0;"><td>10</td><td>Logic Alarm</td><td>Low moisture &lt; 200</td><td>Sad icon and music</td><td>Pass</td><td>N/A</td></tr>
+									</tbody>
+								</table>
+							</div>
+						</div>
+					</div>
+					<div class="card full">
+						<h3>Software Development and Data Processing</h3>
+						<div class="placeholder-text">
+							<p>The software phase created a pipeline between the hardware and web visualization. A primary struggle was normalizing raw sensor data in model.py. The Kitronik sensor output (0-700) was mapped to a 0.0 to 1.0 index for processing by the risk algorithm. I resolved data gathering issues where null values appeared in the CSV by implementing error handling to skip empty lines. The system uses ireland_sample_points.csv for baselines, with live data integrated via a deterministic scattering function in map.html. Two "what if" scenarios in the Python model simulate climate impacts, ensuring the project functions as a predictive tool. Results.json acts as a bridge, allowing the frontend to calculate risk deltas in real time.</p>
+						</div>
+					</div>
+					<div class="card full">
+						<h3>Map Visualization Logic</h3>
+						<div class="placeholder-text">
+							<p>The TreeRoute map serves as the primary user interface for visualizing disaster risk across Ireland. The JavaScript logic follows a structured pipeline to transform static CSV data and dynamic Python results into an interactive spatial dashboard. As detailed in the flowchart below, the system first initializes the Leaflet base layer and asynchronously fetches the GeoJSON boundaries and sample point data. It then applies the heuristic risk scores from results.json, calculating the "Risk Delta" for what-if scenarios. The UI allows users to toggle between heatmaps, county overlays, and live microbit sensor markers, providing a responsive tool for environmental assessment.</p>
+							<div class="mermaid" style="background: white; padding: 1rem; border-radius: 8px; border: 1px solid #eee; margin-top: 1rem;">
+								flowchart TD
+									A[Start: load map.html] --> B[Initialize Leaflet Map]
+									B --> C{Fetch Data Assets}
+									C -->|Static| D[ireland_sample_points.csv]
+									C -->|Dynamic| E[results.json - Python Output]
+									C -->|Spatial| F[ireland_counties.geojson]
+									D & E & F --> G[Parse & Merge Data]
+									G --> H[Generate Risk Markers]
+									H --> I{User UI Toggles}
+									I -->|Heatmap| J[Render Rainfall Heatmap]
+									I -->|Counties| K[Render Rainfall per County]
+									I -->|Delta| L[Render Risk Delta Layers]
+									I -->|Live| M[Render Microbit Sensor Points]
+									J & K & L & M --> N[Interactive Map Dashboard]
+							</div>
+						</div>
+					</div>
+				</div>
+			</section>
+
+			<section id="map" class="report-section">
+				<h2>TreeRoute Ireland — Interactive Map</h2>
+				<div class="grid">
+					<div class="card full">
+						<p class="placeholder-text">Below is an embedded interactive map and data viewer (TreeRoute). If the map does not load, open the standalone page: <a href="../Artefact/treeroute/map.html">TreeRoute map</a>.</p>
+						<iframe class="embed-iframe" src="../Artefact/treeroute/map.html" title="TreeRoute Ireland map"></iframe>
+					</div>
+				</div>
+			</section>
+
+			<section id="evaluation" class="report-section">
+				<h2>Evaluation</h2>
+				<div class="grid">
+					<div class="card full">
+						<h3>Project Evaluation</h3>
+						<div class="placeholder-text">
+							<p>The final environmental sensor dart successfully met the core objectives of the brief by integrating real time data collection with an adaptive risk model. The BBC microbit V2 effectively managed the multiple inputs from the Kitronik soil sensor and internal components to provide a clear picture of local flood and fire risks. The system proved its autonomy by operating in a continuous loop and providing both visual and auditory feedback based on environmental thresholds. The serial link to the Python model and the subsequent GeoJSON map visualization successfully translated raw sensor values into an intuitive tool for land suitability analysis.</p>
+							<p>However, several areas for improvement were identified during the testing phase. The current CAD housing is larger than necessary for a final production model. I could iterate on this design by scaling down the model to make it more aerodynamic and cost effective for 3D printing. Reducing the bulk would also make drone deployment more efficient. Furthermore, the system could be improved by introducing additional sensors such as an ultraviolet index sensor or a CO2 monitor to provide a more comprehensive environmental profile. Future versions would also benefit from moving from a wired serial connection to a long range radio or LoRaWAN module to allow for truly remote data transmission from the field. These iterations would transform the proof of concept into a professional grade environmental tool.</p>
+						</div>
+					</div>
+				</div>
+			</section>
+
+			<section id="references" class="report-section">
+				<h2>References</h2>
+				<div class="card full">
+					<h3>Technical Documentation and Data Sources</h3>
+					<div class="placeholder-text">
+						<p>Data.gov.ie. Irish Open Data Portal. Available at: <a href="https://data.gov.ie/" target="_blank">https://data.gov.ie/</a> [Accessed March 2026].</p>
+						<p>Kitronik Ltd. Data Sheet for Soil Moisture Sensor for BBC microbit. Available at: <a href="https://kitronik.co.uk/" target="_blank">https://kitronik.co.uk/</a> [Accessed December 2025].</p>
+						<p>Microbit Educational Foundation. BBC microbit V2 Technical Specifications and Pinout Diagram. Available at: <a href="https://microbit.org/" target="_blank">https://microbit.org/</a> [Accessed January 2026].</p>
+						<p>Met Eireann. Historical Rainfall Data and Environmental Proxies for Ireland. Available at: <a href="https://www.met.ie/" target="_blank">https://www.met.ie/</a> [Accessed December 2025].</p>
+						<p>Office of Public Works. National Flood Hazard Mapping and Risk Assessment Portal. Available at: <a href="https://www.floodinfo.ie/" target="_blank">https://www.floodinfo.ie/</a> [Accessed February 2026].</p>
+						<p>Python Software Foundation. PySerial Library Documentation. Available at: <a href="https://python.org/" target="_blank">https://python.org/</a> [Accessed February 2026].</p>
+						<p>W3Schools. Python File Handling and CSV Dictionary Reader Tutorials. Available at: <a href="https://www.w3schools.com/python/" target="_blank">https://www.w3schools.com/python/</a> [Accessed January 2026].</p>
+						<p>LeafletJS. An Open Source JavaScript Library for Interactive Maps. Available at: <a href="https://leafletjs.com/" target="_blank">https://leafletjs.com/</a> [Accessed March 2026].</p>
+						<p>AirSeed Technologies. Aerial Seeding and Autonomous Reforestation Intelligence. Available at: <a href="https://www.airseedtech.com/" target="_blank">https://www.airseedtech.com/</a> [Accessed March 2026].</p>
+					</div>
+				</div>
+			</section>
+
+			<section id="summary" class="report-section">
+				<h2>7. Summary word count</h2>
+				<div class="card full">
+					<div class="table-container">
+						<table style="width: 100%; border-collapse: collapse; margin-top: 1rem;">
+							<thead>
+								<tr style="background-color: #f8fafc; border-bottom: 2px solid #e2e8f0;">
+									<th style="padding: 0.75rem; text-align: left;">Section</th>
+									<th style="padding: 0.75rem; text-align: right;">Word Count</th>
+								</tr>
+							</thead>
+							<tbody>
+								<tr style="border-bottom: 1px solid #e2e8f0;"><td style="padding: 0.75rem;">1. Meeting the brief</td><td style="padding: 0.75rem; text-align: right;">453</td></tr>
+								<tr style="border-bottom: 1px solid #e2e8f0;"><td style="padding: 0.75rem;">2. Investigation</td><td style="padding: 0.75rem; text-align: right;">370</td></tr>
+								<tr style="border-bottom: 1px solid #e2e8f0;"><td style="padding: 0.75rem;">3. Plan and design</td><td style="padding: 0.75rem; text-align: right;">550</td></tr>
+								<tr style="border-bottom: 1px solid #e2e8f0;"><td style="padding: 0.75rem;">4. Create</td><td style="padding: 0.75rem; text-align: right;">705</td></tr>
+								<tr style="border-bottom: 1px solid #e2e8f0;"><td style="padding: 0.75rem;">5. Evaluation</td><td style="padding: 0.75rem; text-align: right;">234</td></tr>
+								<tr style="font-weight: bold; background-color: #f8fafc;"><td style="padding: 0.75rem;">Total:</td><td style="padding: 0.75rem; text-align: right;">2312</td></tr>
+							</tbody>
+						</table>
+					</div>
+				</div>
+			</section>
+
+			<p class="back-top"><a href="#top">Back to top</a></p>
+		</main>
+
+		<footer class="site-header">
+			<div class="container header-inner">
+				<p class="site-title" style="font-size: 0.8rem;">Computer Science Coursework 2026</p>
+			</div>
+		</footer>
+
+		<script src="script.js"></script>
+	</body>
+</html>

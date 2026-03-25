@@ -1,4 +1,4 @@
-/* Small script to handle mobile nav toggle and update the summary word count when the summary placeholder changes. */
+/* Small script to handle mobile nav toggle. */
 document.addEventListener('DOMContentLoaded', function(){
   var navToggle = document.getElementById('nav-toggle');
   var primaryNav = document.getElementById('primary-nav');
@@ -28,23 +28,4 @@ document.addEventListener('DOMContentLoaded', function(){
       }
     });
   });
-
-  // Word count for summary placeholder — updates if content changes.
-  var summary = document.getElementById('summary-text');
-  var wc = document.getElementById('word-count');
-  function updateWordCount(){
-    if(!summary || !wc) return;
-    var text = summary.textContent || '';
-    var words = text.trim().split(/\s+/).filter(function(w){return w.length>0});
-    wc.textContent = String(words.length);
-  }
-
-  // Observe mutations in the summary placeholder to refresh the count if content is replaced.
-  if(window.MutationObserver && summary){
-    var mo = new MutationObserver(updateWordCount);
-    mo.observe(summary, {childList:true,characterData:true,subtree:true});
-  }
-
-  // Initial count
-  updateWordCount();
 });

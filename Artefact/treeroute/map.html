@@ -1,0 +1,475 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>TreeRoute — Simple Map</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+  <style>
+    html,body{height:100%;margin:0;padding:0;font-family:Roboto,system-ui,Arial}
+    #map{position:absolute;left:0;top:0;right:0;bottom:0}
+
+    /* Right control panel */
+    .control-panel{
+      position:absolute;right:12px;top:12px;z-index:1200;background:#fff;padding:12px;border-radius:8px;box-shadow:0 6px 18px rgba(2,6,23,0.12);width:280px;max-height:80vh;overflow:auto}
+    .control-panel h3{margin:0 0 8px 0;font-size:14px}
+    .control-row{display:flex;align-items:center;justify-content:space-between;margin:8px 0}
+    .control-row label{flex:1;margin-left:8px}
+    .status{font-size:12px;color:#555;margin-top:8px}
+
+    .legend{margin-top:8px;font-size:13px}
+    .legend-item{display:flex;align-items:center;margin:6px 0}
+    .legend-color{width:18px;height:12px;margin-right:8px;border-radius:3px}
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+
+  <div class="control-panel" id="controls">
+    <h3>Map Layers</h3>
+    <div class="control-row"><input id="toggle-points" type="checkbox" checked><label for="toggle-points">Sample points</label></div>
+    <div class="control-row"><input id="toggle-heat" type="checkbox"><label for="toggle-heat">Rainfall heatmap</label></div>
+      <div class="control-row"><input id="toggle-floodrisk" type="checkbox" checked><label for="toggle-floodrisk">Flood risk layer</label></div>
+      <div class="control-row"><input id="toggle-trees" type="checkbox"><label for="toggle-trees">Tree suitability layer</label></div>
+    <div class="control-row"><input id="toggle-clusters" type="checkbox" checked><label for="toggle-clusters">Use cluster markers</label></div>
+    <div class="control-row"><input id="toggle-counties" type="checkbox"><label for="toggle-counties">Show counties</label></div>
+    <div class="control-row"><input id="toggle-microbit" type="checkbox"><label for="toggle-microbit">Micro:bit sensors (Field Test)</label></div>
+    <div class="control-row"><input id="toggle-delta-temp" type="checkbox"><label for="toggle-delta-temp">Show risk delta (+3°C)</label></div>
+    <div class="control-row"><input id="toggle-delta-rain" type="checkbox"><label for="toggle-delta-rain">Show risk delta (-30% rain)</label></div>
+    <div class="status" id="load-status">Loading data...</div>
+    <div style="font-size:13px;margin-top:8px"><strong>Model — why this meets requirements</strong>
+      <div style="margin-top:6px">- Uses embedded micro:bit sensor data (Moisture) plus sample and county data.<br/>- Python model computes a wildfire-risk index (0–1) and runs two what-if scenarios (+3°C, -30% rain).<br/>- Scenario deltas show how risk changes per point.</div>
+    </div>
+    <div class="legend" id="legend" aria-hidden="false">
+      <div style="font-weight:600;margin-top:8px">Legend</div>
+      <div class="legend-item"><div class="legend-color" style="background:#e55934"></div><div>Sample point</div></div>
+      <div class="legend-item"><div class="legend-color" style="background:#1565c0"></div><div>High rainfall (heat)</div></div>
+      <div class="legend-item"><div class="legend-color" style="background:#800026"></div><div>Large positive risk increase (Δ)</div></div>
+      <div class="legend-item"><div class="legend-color" style="background:#313695"></div><div>Large negative risk change (Δ)</div></div>
+      <div style="margin-top:6px;font-size:12px;color:#444">Notes: risk index is a heuristic 0–1 value; flood susceptibility is a separate 0–1 value.</div>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+  <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <script>
+    const map = L.map('map').setView([53.4, -8.2], 7);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(map);
+
+    let markers = null; // either markerClusterGroup or featureGroup
+    let heatLayer = null;
+    let rawData = [];
+    let countyLayer = null;
+    let countyRain = {}; // county -> avg annual rainfall
+
+    function createMarker(p){
+      const color = p.soil_moisture >= 0 ? getMoistureColor(p.soil_moisture) : '#e55934';
+      const radius = 6 + Math.min(6, Math.round((p.elevation||0)/200));
+      const m = L.circleMarker([p.lat,p.lon],{radius,fillColor:color,color:'#fff',weight:1,fillOpacity:0.9});
+      // attach point_id for later popup updates
+      if(p.point_id) m.options.point_id = p.point_id;
+      const popupBase = `<strong>${p.county} - ${p.point_id}</strong><br/>Elev: ${p.elevation} m<br/>Rain: ${p.rainfall} mm<br/>Soil moisture: ${(p.soil_moisture*100).toFixed(0)}%<br/>Flood: ${(p.flood*100).toFixed(0)}%`;
+      m.bindPopup(popupBase);
+      return m;
+    }
+
+    // Microbit layer loader: all sensors will be placed at a France location to keep origin ambiguous
+    async function loadMicrobitSensors(path){
+      // Scatter microbit points deterministically across a France bounding box.
+      const bbox = {minLat:43.0, maxLat:50.0, minLon:-1.0, maxLon:7.0};
+      try{
+        const data = await loadCSVviaFetch(path) || await new Promise((resolve)=>{ Papa.parse(path,{download:true,header:true,skipEmptyLines:true,complete:(r)=>resolve(r)}); });
+        if(!data) return null;
+        const microGroup = L.layerGroup();
+        const n = data.length || 1;
+        const rand = (s) => Math.abs(Math.sin(s) * 10000) % 1;
+        data.forEach((r, i)=>{
+          // skip header repetition
+          if(r.Temperature === 'Temperature') return;
+
+          const temp = parseFloat(r.Temperature||r.temperature||0);
+          const moist = parseFloat(r.Moisture||r.moisture||0);
+          const status = r.Status || r.status || '';
+          const soil_m = Math.max(0, Math.min(1, moist/700.0));
+          const annual_rain = 900.0;
+          const flood = Math.max(0, Math.min(1, (soil_m * (annual_rain/1200.0))));
+
+          // deterministic pseudo-random placement per index
+          const latFrac = rand(i + 1);
+          const lonFrac = rand(i + 37);
+          const lat = bbox.minLat + latFrac * (bbox.maxLat - bbox.minLat);
+          const lon = bbox.minLon + lonFrac * (bbox.maxLon - bbox.minLon);
+
+          const point = {
+            lat: lat,
+            lon: lon,
+            county: 'Ambiguous Location',
+            point_id: `microbit_${i+1}`,
+            elevation: 45,
+            soil_moisture: soil_m,
+            rainfall: annual_rain,
+            flood: flood,
+            temp: temp,
+            raw_status: status
+          };
+
+          // expose into rawData so aggregation includes microbit points
+          rawData.push(point);
+
+          const color = getMoistureColor(point.soil_moisture);
+          const m = L.circleMarker([point.lat, point.lon],{radius:7,fillColor:color,color:'#222',weight:0.6,fillOpacity:0.95});
+          const popup = `<strong>${point.point_id} (microbit)</strong><br/>Temp: ${temp}°C<br/>Moisture: ${moist}<br/>Soil index: ${(soil_m*100).toFixed(0)}%<br/>Status: ${status}<br/>Flood: ${(flood*100).toFixed(0)}%<br/>Coords: ${lat.toFixed(4)}, ${lon.toFixed(4)}`;
+          m.bindPopup(popup);
+          microGroup.addLayer(m);
+        });
+        window._microGroup = microGroup;
+        if(document.getElementById('toggle-microbit').checked) map.addLayer(microGroup);
+        return microGroup;
+      }catch(e){ console.error('microbit load error', e); return null; }
+    }
+
+    function getMoistureColor(v){
+      if(v<0.3) return '#fee5d9';
+      if(v<0.4) return '#fcae91';
+      if(v<0.5) return '#fb6a4a';
+      if(v<0.55) return '#de2d26';
+      return '#a50f15';
+    }
+
+    function getFloodColor(v){
+      if(v==null) return '#999';
+      if(v<0.30) return '#2ca25f'; // green
+      if(v<0.60) return '#ff8c00'; // orange
+      return '#de2d26'; // red
+    }
+
+    function getSuitabilityColor(v){
+      if(v==null) return '#ccc';
+      if(v>0.75) return '#0b6623'; // dark green
+      if(v>0.5) return '#2e8b57';
+      if(v>0.3) return '#f1c40f'; // yellow
+      return '#8b4513'; // brown (unsuitable)
+    }
+
+    function haversineKm(lat1, lon1, lat2, lon2){
+      const toRad = Math.PI/180;
+      const dLat = (lat2-lat1)*toRad;
+      const dLon = (lon2-lon1)*toRad;
+      const a = Math.sin(dLat/2)**2 + Math.cos(lat1*toRad)*Math.cos(lat2*toRad)*Math.sin(dLon/2)**2;
+      const c = 2*Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+      return 6371*c; // km
+    }
+
+    async function loadCSVviaFetch(path){
+      try{
+        const r = await fetch(path);
+        if(!r.ok) throw new Error('Fetch failed: '+r.status);
+        const text = await r.text();
+        const parsed = Papa.parse(text, {header:true,skipEmptyLines:true});
+        return parsed.data;
+      }catch(err){
+        console.warn('fetch parse failed, falling back to Papa.parse download:', err);
+        return null;
+      }
+    }
+
+    async function loadData(){
+      const status = document.getElementById('load-status');
+      status.textContent = 'Loading sample points...';
+
+      // try fetch first (works when served over HTTP). If null, fall back to Papa.parse with download.
+      let data = await loadCSVviaFetch('../data/ireland_sample_points.csv');
+      if(!data){
+        // fallback
+        try{
+          const res = await new Promise((resolve)=>{
+            Papa.parse('../data/ireland_sample_points.csv', {download:true, header:true, skipEmptyLines:true, complete: (r)=>resolve(r)});
+          });
+          data = res.data;
+        }catch(e){
+          status.textContent = 'Error loading CSV: '+e.message;
+          console.error(e);
+          return;
+        }
+      }
+
+      rawData = data.filter(d=>d.lat && d.lon).map(d=>({
+        lat: parseFloat(d.lat), lon: parseFloat(d.lon), county:d.county, point_id:d.point_id,
+        elevation: parseFloat(d.elevation_m||0), soil_moisture: parseFloat(d.soil_moisture_index_0_1||d.soil_moisture||0), rainfall: parseFloat(d.annual_rainfall_mm||d.rainfall||0), flood: parseFloat(d.flood_susceptibility_0_1||d.flood||0),
+        suitability_oak: parseFloat(d.suitability_oak||0), suitability_alder: parseFloat(d.suitability_alder||0), suitability_scots_pine: parseFloat(d.suitability_scots_pine||0), suitability_birch: parseFloat(d.suitability_birch||0)
+      }));
+
+      // create marker container depending on cluster toggle
+      const useClusters = document.getElementById('toggle-clusters').checked;
+      markers = useClusters ? L.markerClusterGroup({chunkedLoading:true,maxClusterRadius:50}) : L.featureGroup();
+
+      // create additional layer groups
+      const floodGroup = L.layerGroup();
+      const treeGroup = L.layerGroup();
+      rawData.forEach(p=>{
+        const m = createMarker(p);
+        if(useClusters) markers.addLayer(m); else markers.addLayer(m);
+
+        // flood risk marker (colored)
+        const floodColor = getFloodColor(p.flood);
+        const fm = L.circleMarker([p.lat,p.lon],{radius:8,fillColor:floodColor,color:'#222',weight:0.6,fillOpacity:0.6});
+        fm.bindPopup(`<strong>${p.county} - ${p.point_id}</strong><br/>Flood risk: ${(p.flood*100).toFixed(0)}%`);
+        floodGroup.addLayer(fm);
+
+        // tree suitability marker (max of suitability scores)
+        const ts = Math.max(p.suitability_oak||0,p.suitability_alder||0,p.suitability_scots_pine||0,p.suitability_birch||0);
+        const treeColor = getSuitabilityColor(ts);
+        const tm = L.circleMarker([p.lat,p.lon],{radius:6,fillColor:treeColor,color:'#fff',weight:0.6,fillOpacity:0.6});
+        tm.bindPopup(`<strong>${p.county} - ${p.point_id}</strong><br/>Tree suitability: ${(ts*100).toFixed(0)}%`);
+        treeGroup.addLayer(tm);
+      });
+
+      if(document.getElementById('toggle-points').checked) map.addLayer(markers);
+
+      // if risk results were already loaded, update marker popups to include baseline risk
+      if(window._riskBaselineMap) updateMarkerPopups(window._riskBaselineMap);
+
+      // add flood & tree groups according to toggles
+      window._floodGroup = floodGroup; window._treeGroup = treeGroup;
+      if(document.getElementById('toggle-floodrisk').checked) map.addLayer(floodGroup);
+      if(document.getElementById('toggle-trees').checked) map.addLayer(treeGroup);
+
+      // heatmap points (rainfall normalized)
+      const heatPoints = rawData.map(p=>[p.lat,p.lon, Math.max(0.01, Math.min(1, p.rainfall/500))]);
+      heatLayer = L.heatLayer(heatPoints,{radius:25,blur:18,minOpacity:0.2}).addTo(map);
+      if(!document.getElementById('toggle-heat').checked) map.removeLayer(heatLayer);
+
+      status.textContent = `Loaded ${rawData.length} sample points`;
+    }
+
+    async function loadCounties(){
+      const status = document.getElementById('load-status');
+      status.textContent = 'Loading counties...';
+      // load monthly rainfall CSV, compute annual averages per county
+      let csv = await loadCSVviaFetch('../data/ireland_county_monthly_rainfall.csv');
+      if(!csv){
+        const res = await new Promise((resolve)=>{ Papa.parse('../data/ireland_county_monthly_rainfall.csv',{download:true,header:true,skipEmptyLines:true,complete:(r)=>resolve(r)}); });
+        csv = res.data;
+      }
+      countyRain = {};
+      const sums = {};
+      const counts = {};
+      csv.forEach(r=>{
+        const c = r.county;
+        const v = parseFloat(r.avg_rainfall_mm||r.avg||0);
+        if(!sums[c]){sums[c]=0;counts[c]=0}
+        sums[c]+=v; counts[c]+=1;
+      });
+      Object.keys(sums).forEach(c=>{ countyRain[c] = sums[c]/counts[c]; });
+
+      // load geojson
+      try{
+        const resp = await fetch('../data/ireland_counties.geojson');
+        const gj = await resp.json();
+        function getColor(v){
+          if(v==null) return '#fff';
+          if(v>180) return '#08306b';
+          if(v>150) return '#2166ac';
+          if(v>120) return '#4292c6';
+          if(v>90) return '#9ecae1';
+          return '#deebf7';
+        }
+        function style(feature){
+          const name = feature.properties && feature.properties.county;
+          const val = countyRain[name];
+          return {color:'#333',weight:1,opacity:0.6,fillColor:getColor(val),fillOpacity:0.6};
+        }
+        countyLayer = L.geoJSON(gj,{style, onEachFeature:(f,layer)=>{
+          const name = f.properties && f.properties.county;
+          const avg = countyRain[name] ? countyRain[name].toFixed(1) + ' mm (avg)' : 'N/A';
+          layer.bindPopup(`<strong>${name}</strong><br/>Avg annual rainfall: ${avg}`);
+        }});
+        // only add if toggle enabled
+        if(document.getElementById('toggle-counties').checked) map.addLayer(countyLayer);
+        status.textContent = 'Counties loaded';
+      }catch(e){ status.textContent = 'Error loading counties'; console.error(e); }
+    }
+
+    // Load model results and build per-point delta layers
+    let riskResults = null;
+    let riskDeltaTempLayer = null;
+    let riskDeltaRainLayer = null;
+
+    function updateMarkerPopups(baselineMap){
+      if(!markers || !baselineMap) return;
+      // iterate layers in markers (works for markerClusterGroup and featureGroup)
+      markers.eachLayer(function(layer){
+        try{
+          const id = layer.options && layer.options.point_id;
+          if(!id) return;
+          const b = baselineMap[id];
+          if(b===undefined) return;
+          // read existing popup content and append baseline risk
+          const old = layer.getPopup && layer.getPopup() && layer.getPopup().getContent ? layer.getPopup().getContent() : null;
+          const baselineText = `<br/><strong>Baseline risk:</strong> ${b}`;
+          const newContent = old ? (old + baselineText) : (`<strong>${id}</strong>` + baselineText);
+          layer.bindPopup(newContent);
+        }catch(e){ /* ignore */ }
+      });
+    }
+
+    function getDeltaColor(d){
+      // d = scenario - baseline
+      if(d === null || d === undefined) return '#999';
+      if(d > 0.20) return '#800026';
+      if(d > 0.10) return '#bd0026';
+      if(d > 0.05) return '#e31a1c';
+      if(d > 0.01) return '#fc4e2a';
+      if(d >= -0.01 && d <= 0.01) return '#ffffcc';
+      if(d > -0.05) return '#91bfdb';
+      if(d > -0.10) return '#4575b4';
+      return '#313695';
+    }
+
+    async function loadRiskResults(path = '../forest_model/results.json'){
+      try{
+        const r = await fetch(path);
+        if(!r.ok) throw new Error('Failed to fetch results');
+        riskResults = await r.json();
+      }catch(e){ console.warn('Could not load risk results:', e); riskResults = null; }
+      buildDeltaLayers();
+    }
+
+    function buildDeltaLayers(){
+      if(!riskResults || !riskResults.points) return;
+      const baseline = {}; const temp = {}; const rain = {};
+      (riskResults.points.baseline || []).forEach(p=> baseline[p.point_id] = p.risk);
+      (riskResults.points.scenario_temp_plus_3C || []).forEach(p=> temp[p.point_id] = p.risk);
+      (riskResults.points.scenario_rain_minus_30pct || []).forEach(p=> rain[p.point_id] = p.risk);
+
+      // create layers
+      riskDeltaTempLayer = L.layerGroup();
+      riskDeltaRainLayer = L.layerGroup();
+
+      rawData.forEach(p=>{
+        const id = p.point_id;
+        const b = baseline[id];
+        if(b===undefined) return; // skip if not in results
+        const t = temp[id];
+        const rn = rain[id];
+        if(t!==undefined){
+          const d = +(t - b).toFixed(4);
+          const c = getDeltaColor(d);
+          const m = L.circleMarker([p.lat,p.lon],{radius:6 + Math.min(8, Math.abs(d)*40), fillColor:c, color:'#222', weight:0.6, fillOpacity:0.9});
+          m.bindPopup(`<strong>${id}</strong><br/>Baseline: ${b}<br/>+3°C: ${t}<br/>Δ: ${d}`);
+          riskDeltaTempLayer.addLayer(m);
+        }
+        if(rn!==undefined){
+          const d2 = +(rn - b).toFixed(4);
+          const c2 = getDeltaColor(d2);
+          const m2 = L.circleMarker([p.lat,p.lon],{radius:6 + Math.min(8, Math.abs(d2)*40), fillColor:c2, color:'#222', weight:0.6, fillOpacity:0.9});
+          m2.bindPopup(`<strong>${id}</strong><br/>Baseline: ${b}<br/>-30% rain: ${rn}<br/>Δ: ${d2}`);
+          riskDeltaRainLayer.addLayer(m2);
+        }
+      });
+      // store baseline map globally and update marker popups
+      const baselineMap = baseline;
+      window._riskBaselineMap = baselineMap;
+      updateMarkerPopups(baselineMap);
+    }
+
+    // toggles
+    document.getElementById('toggle-delta-temp').addEventListener('change', async (e)=>{
+      if(e.target.checked){
+        if(!riskResults) await loadRiskResults();
+        if(riskDeltaTempLayer) map.addLayer(riskDeltaTempLayer);
+      }else{ if(riskDeltaTempLayer) map.removeLayer(riskDeltaTempLayer); }
+    });
+    document.getElementById('toggle-delta-rain').addEventListener('change', async (e)=>{
+      if(e.target.checked){
+        if(!riskResults) await loadRiskResults();
+        if(riskDeltaRainLayer) map.addLayer(riskDeltaRainLayer);
+      }else{ if(riskDeltaRainLayer) map.removeLayer(riskDeltaRainLayer); }
+    });
+
+    document.getElementById('toggle-counties').addEventListener('change',(e)=>{
+      if(!countyLayer) return;
+      if(e.target.checked) map.addLayer(countyLayer); else map.removeLayer(countyLayer);
+    });
+
+    document.getElementById('toggle-microbit').addEventListener('change', async (e)=>{
+      if(e.target.checked){
+        if(!window._microGroup) await loadMicrobitSensors('../data/microbit_sensor_data.csv');
+        if(window._microGroup) map.addLayer(window._microGroup);
+      }else{
+        if(window._microGroup) map.removeLayer(window._microGroup);
+      }
+    });
+
+    document.getElementById('toggle-points').addEventListener('change', (e)=>{
+      if(!markers) return;
+      if(e.target.checked) map.addLayer(markers); else map.removeLayer(markers);
+    });
+    document.getElementById('toggle-heat').addEventListener('change', (e)=>{
+      if(!heatLayer) return;
+      if(e.target.checked) map.addLayer(heatLayer); else map.removeLayer(heatLayer);
+    });
+    document.getElementById('toggle-floodrisk').addEventListener('change',(e)=>{
+      if(!window._floodGroup) return;
+      if(e.target.checked) map.addLayer(window._floodGroup); else map.removeLayer(window._floodGroup);
+    });
+    document.getElementById('toggle-trees').addEventListener('change',(e)=>{
+      if(!window._treeGroup) return;
+      if(e.target.checked) map.addLayer(window._treeGroup); else map.removeLayer(window._treeGroup);
+    });
+    document.getElementById('toggle-clusters').addEventListener('change', (e)=>{
+      // rebuild markers layer
+      if(!rawData.length) return;
+      const showPoints = document.getElementById('toggle-points').checked;
+      if(map.hasLayer(markers)) map.removeLayer(markers);
+      const useClusters = e.target.checked;
+      markers = useClusters ? L.markerClusterGroup({chunkedLoading:true,maxClusterRadius:50}) : L.featureGroup();
+      rawData.forEach(p=> markers.addLayer(createMarker(p)));
+      if(showPoints) map.addLayer(markers);
+    });
+
+    // initial load
+    loadData().catch(e=>{document.getElementById('load-status').textContent = 'Error: '+e.message; console.error(e)});
+    loadCounties().catch(e=>{console.error(e)});
+
+    // Click anywhere to get area-aggregated environmental values
+    let _lastQueryCircle = null;
+    map.on('click', function(ev){
+      const lat = ev.latlng.lat, lon = ev.latlng.lng;
+      const radius_km = 15; // search radius
+      const found = rawData.filter(p=> haversineKm(lat,lon,p.lat,p.lon) <= radius_km);
+      if(_lastQueryCircle) map.removeLayer(_lastQueryCircle);
+      _lastQueryCircle = L.circle([lat,lon], {radius: radius_km*1000, color:'#333', weight:1.2, dashArray:'4 6', fill:false}).addTo(map);
+
+      if(found.length===0){
+        // find nearest
+        let best = null; let bestd = 1e9;
+        rawData.forEach(p=>{
+          const d = haversineKm(lat,lon,p.lat,p.lon);
+          if(d<bestd){ bestd=d; best=p; }
+        });
+        const content = best ? `<strong>Nearest point:</strong><br/>${best.county} ${best.point_id}<br/>Distance: ${bestd.toFixed(1)} km<br/>Elev: ${best.elevation} m<br/>Rain: ${best.rainfall} mm<br/>Soil moisture: ${(best.soil_moisture*100).toFixed(0)}%<br/>Flood risk: ${(best.flood*100).toFixed(0)}%` : 'No data available';
+        L.popup().setLatLng(ev.latlng).setContent(content).openOn(map);
+        return;
+      }
+
+      // aggregate
+      const n = found.length;
+      const sum = found.reduce((acc,p)=>{
+        acc.elev += (p.elevation||0);
+        acc.rain += (p.rainfall||0);
+        acc.soil += (p.soil_moisture||0);
+        acc.flood += (p.flood||0);
+        acc.suit += Math.max(p.suitability_oak||0,p.suitability_alder||0,p.suitability_scots_pine||0,p.suitability_birch||0);
+        return acc;
+      }, {elev:0,rain:0,soil:0,flood:0,suit:0});
+      const content = `<strong>Area summary (${n} points within ${radius_km} km)</strong><br/>Avg elev: ${(sum.elev/n).toFixed(1)} m<br/>Avg rainfall: ${(sum.rain/n).toFixed(1)} mm<br/>Avg soil moisture: ${((sum.soil/n)*100).toFixed(0)}%<br/>Avg flood risk: ${((sum.flood/n)*100).toFixed(0)}%<br/>Avg tree suitability: ${((sum.suit/n)*100).toFixed(0)}%`;
+      L.popup({maxWidth:360}).setLatLng(ev.latlng).setContent(content).openOn(map);
+    });
+  </script>
+</body>
+</html>

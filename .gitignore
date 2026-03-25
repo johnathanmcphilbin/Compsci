@@ -1,0 +1,12 @@
+# OS/editor
+.DS_Store
+.vscode/
+
+# Python virtual environments
+.venv/
+**/.venv/
+venv/
+**/venv/
+
+# Large local media/assets
+Report/assets/full_video.mp4
